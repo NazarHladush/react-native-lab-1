@@ -6,6 +6,8 @@ import {LoginScreen, HomeScreen, RegistrationScreen} from './src/screens'
 import {DefaultTheme, Provider as PaperProvider} from 'react-native-paper';
 import {firebase} from './src/firebase/config'
 import {decode, encode} from 'base-64'
+import {Button} from "react-native";
+import Loading from "./src/screens/LoadingScreen/loading";
 
 
 if (!global.btoa) {
@@ -19,23 +21,37 @@ const Stack = createStackNavigator();
 
 export default function App() {
 
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(true)
     const [user, setUser] = useState(null)
 
-    // useEffect(() => {
-    //     firebase.auth().onAuthStateChanged(user => {
-    //         if (user) {
-    //             console.log(user)
-    //             setLoading(false)
-    //         } else {
-    //             setLoading(false)
-    //         }
-    //     });
-    // }, []);
+    useEffect(() => {
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                firebase.database().ref('/users/' + user.uid).once('value').then(
+                    snapshot => {
+                        const userData = snapshot.val();
+                        setLoading(false)
+                        setUser(userData);
+                    }
+                ).catch(error => {
+                    setLoading(false)
+                    alert(error)
+                })
+            } else {
+                setLoading(false)
+            }
+        });
+    }, []);
+
+    const logOut = () => {
+        firebase.auth().signOut().then(() => {
+            setUser(null);
+        })
+    }
 
     if (loading) {
         return (
-            <></>
+            <Loading />
         )
     }
 
@@ -52,13 +68,25 @@ export default function App() {
             <NavigationContainer>
                 <Stack.Navigator>
                     {user ? (
-                        <Stack.Screen name="Home">
+                        <Stack.Screen name="Home" options={{
+                            headerRight: () => (
+                                <Button
+                                    onPress={() => logOut()}
+                                    title="Log out"
+                                    color="red"
+                                />
+                            ),
+                        }}>
                             {props => <HomeScreen {...props} extraData={user}/>}
                         </Stack.Screen>
                     ) : (
                         <>
-                            <Stack.Screen name="Login" component={LoginScreen}/>
-                            <Stack.Screen name="Registration" component={RegistrationScreen}/>
+                            <Stack.Screen name='Login'>
+                                {props => <LoginScreen {...props} setLoading={setLoading}/>}
+                            </Stack.Screen>
+                            <Stack.Screen name="Registration">
+                                {props => <RegistrationScreen {...props} setLoading={setLoading}/>}
+                            </Stack.Screen>
                         </>
                     )}
                 </Stack.Navigator>
