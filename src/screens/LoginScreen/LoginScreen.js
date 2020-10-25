@@ -1,14 +1,15 @@
 import React, {useState} from 'react'
-import {Text, TouchableOpacity, View} from 'react-native'
+import {Text, TouchableOpacity, View, SafeAreaView} from 'react-native'
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
-import {HelperText, TextInput} from 'react-native-paper';
+import {Button, HelperText, TextInput} from 'react-native-paper';
 import {firebase} from '../../firebase/config'
 import styles from './styles';
 import {validate} from "validate.js";
 import emailConstraints from "../../validate/emailConstraints";
 import passwordConstraints from "../../validate/passwordConstraints";
+import IntlPhoneInput from 'react-native-intl-phone-input';
 
-export default function LoginScreen({navigation}) {
+export default function LoginScreen({navigation, setLoading}) {
 
     const [email, setEmail] = useState('')
     const [emailError, setEmailError] = useState('')
@@ -23,30 +24,27 @@ export default function LoginScreen({navigation}) {
     }
 
     const onLoginPress = () => {
-        // firebase
-        //     .auth()
-        //     .signInWithEmailAndPassword(email, password)
-        //     .then((response) => {
-        //         const uid = response.user.uid
-        //         const usersRef = firebase.firestore().collection('users')
-        //         usersRef
-        //             .doc(uid)
-        //             .get()
-        //             .then(firestoreDocument => {
-        //                 if (!firestoreDocument.exists) {
-        //                     alert("User does not exist anymore.")
-        //                     return;
-        //                 }
-        //                 const user = firestoreDocument.data()
-        //                 navigation.navigate('Home', {user})
-        //             })
-        //             .catch(error => {
-        //                 alert(error)
-        //             });
-        //     })
-        //     .catch(error => {
-        //         alert(error)
-        //     })
+        setLoading(true);
+        firebase
+            .auth()
+            .signInWithEmailAndPassword(email, password)
+            .then((response) => {
+                const uid = response.user.uid
+                firebase.database().ref('/users/' + uid).once('value')
+                    .then(
+                        snapshot => {
+                            const user = snapshot.val();
+                            navigation.navigate('Home', {user: user});
+                        }
+                    ).catch(error => {
+                    alert(error)
+                    setLoading(false);
+                })
+            })
+            .catch(error => {
+                alert(error)
+                setLoading(false);
+            })
     }
 
     const onChangeEmail = (email) => {
@@ -106,7 +104,6 @@ export default function LoginScreen({navigation}) {
                     >
                         {emailError}
                     </HelperText>}
-
 
                 <TextInput
                     style={styles.input}
