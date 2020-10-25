@@ -2,6 +2,7 @@ import React, {useState} from 'react'
 import {Text, TouchableOpacity, View} from 'react-native'
 import {KeyboardAwareScrollView} from 'react-native-keyboard-aware-scroll-view';
 import {HelperText, TextInput} from 'react-native-paper';
+import {firebase} from '../../firebase/config'
 import styles from './styles';
 
 import {validate} from 'validate.js';
@@ -11,7 +12,7 @@ import passwordConstraints from "../../validate/passwordConstraints";
 import confirmPasswordConstraints from "../../validate/confirmPasswordConstraints";
 import usernameConstraints from "../../validate/usernameConstraints";
 
-export default function RegistrationScreen({navigation}) {
+export default function RegistrationScreen({navigation, setLoading}) {
     const [fullName, setFullName] = useState('')
     const [fullNameError, setFullNameError] = useState('')
     const [fullNameIsValid, setFullNameValid] = useState(true)
@@ -21,7 +22,7 @@ export default function RegistrationScreen({navigation}) {
     const [emailIsValid, setEmailValid] = useState(true)
 
     const [phone, setPhone] = useState('')
-    const [phoneError, setPhoneError] = useState('')
+    const [phoneError, setPhoneError] = useState('Phone is not valid')
     const [phoneIsValid, setPhoneValid] = useState(true)
 
     const [password, setPassword] = useState('')
@@ -36,22 +37,40 @@ export default function RegistrationScreen({navigation}) {
         navigation.navigate('Login')
     }
 
+    const onFirebasePress = () => {
+        firebase.database().ref('users/2').set({
+            username: "fullName",
+            email: "email",
+            phone: "phone"
+        })
+
+    }
+
     const onRegisterPress = () => {
         //todo Add some logic to empty fields (await func)
-        if (fullNameIsValid && emailIsValid && passwordIsValid && confirmPasswordIsValid) {
-            alert("all is correct")
-
-        }
-
-        // firebase
-        //     .auth()
-        //     .createUserWithEmailAndPassword(email, password)
-        //     .then((response) => {
-        //         console.log(response.toString())
-        //     })
-        //     .catch((error) => {
-        //         alert(error)
-        //     });
+        // if (fullNameIsValid && emailIsValid && passwordIsValid && confirmPasswordIsValid) {
+        //     alert("all is correct")
+        //
+        // }
+        setLoading(true);
+        firebase
+            .auth()
+            .createUserWithEmailAndPassword(email, password)
+            .then((response) => {
+                firebase.database().ref('users/' + response.user.uid).set({
+                    username: fullName,
+                    email: email,
+                    phone: phone
+                }).then(() => {
+                        navigation.navigate('Home', {user: {email, fullName, phone}})
+                    }
+                ).catch(error => {
+                    alert(error)
+                })
+            })
+            .catch((error) => {
+                alert(error)
+            });
     }
 
     const onChangeFullName = (fullName) => {
@@ -85,21 +104,28 @@ export default function RegistrationScreen({navigation}) {
     }
 
     const onChangePhone = (phone) => {
-        setPhone(phone);
-        validatePhone(phone)
+        const code = phone.substring(0, 4);
+        if(code === '+380') {
+            if (phone.length < 13) {
+                setPhoneValid(false);
+                setPhone(phone);
+            }
+            if(phone.length === 13) {
+                setPhone(phone);
+                setPhoneValid(true)
+            }
+        } else {
+            if (phone.length < 10) {
+                setPhoneValid(false)
+                setPhone(phone);
+            }
+            if(phone.length === 10) {
+                setPhone(phone);
+                setPhoneValid(true)
+            }
+        }
+
     };
-
-    const validatePhone = (phone) => {
-            setPhoneValid(true)
-
-        // const validationResult = validate({phone: phone}, phoneConstraints);
-        // if (typeof validationResult === 'undefined') {
-        //     setPhoneValid(true)
-        // } else {
-        //     setPhoneValid(false)
-        //     setPhoneError(validationResult.phone[0])
-        // }
-    }
 
     const onChangePassword = (password) => {
         setPassword(password);
@@ -122,7 +148,10 @@ export default function RegistrationScreen({navigation}) {
     };
 
     const validateConfirmPassword = (confirmPassword) => {
-        const validationResult = validate({password: password, confirmPassword: confirmPassword}, confirmPasswordConstraints);
+        const validationResult = validate({
+            password: password,
+            confirmPassword: confirmPassword
+        }, confirmPasswordConstraints);
         if (typeof validationResult === 'undefined') {
             setConfirmPasswordValid(true)
         } else {
