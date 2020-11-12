@@ -7,7 +7,6 @@ import styles from './styles';
 import {validate} from "validate.js";
 import emailConstraints from "../../validate/emailConstraints";
 import passwordConstraints from "../../validate/passwordConstraints";
-import IntlPhoneInput from 'react-native-intl-phone-input';
 
 export default function LoginScreen({navigation, setLoading}) {
 

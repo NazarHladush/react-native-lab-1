@@ -47,11 +47,6 @@ export default function RegistrationScreen({navigation, setLoading}) {
     }
 
     const onRegisterPress = () => {
-        //todo Add some logic to empty fields (await func)
-        // if (fullNameIsValid && emailIsValid && passwordIsValid && confirmPasswordIsValid) {
-        //     alert("all is correct")
-        //
-        // }
         setLoading(true);
         firebase
             .auth()
